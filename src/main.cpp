@@ -1,10 +1,11 @@
 #include <Arduino.h>
+#include <ArduinoOTA.h>
 #include <LoopbackStream.h>
 #include <SPIFFS.h>
-#include <webServer.h>
-#include <webSocketsServer.h>
 #include <WiFi.h>
 #include <WiFiClient.h>
+#include <webServer.h>
+#include <webSocketsServer.h>
 
 WebSocketsServer webSocket = WebSocketsServer(81);
 
@@ -2046,9 +2047,7 @@ void setup() {
     Serial.println(WiFi.localIP());
     webSocket.begin();
     webSocket.onEvent(webSocketEvent);
-
-    //************************************PRETTY MUCH THE ENTIRE WEB SERVER CODE************************************************
-    {
+    {  //************************************PRETTY MUCH THE ENTIRE WEB SERVER CODE************************************************
         SPIFFS.begin();
         webServer.on("/files", HTTP_GET, []() {
             String content = F("<html><head><style>a{color:#f3bf00;}body{background-color:#000000;color:#f3bf00;}table{border-collapse:collapse;}td,th{border: 1px solid #f3bf00;}input[type=text]{background-color:#000000;color:#f3bf00;border: 1px solid #f3bf00;width:6em;}</style></head><body><h1>File list</h1><table><tr><th>Delete</th><th>Size</th><th>Filename</th></tr>");
@@ -2140,7 +2139,40 @@ void setup() {
         });
         webServer.begin();
     }
-    //****************************************************END OF WEB SERVER CODE************************************************
+    {  //***********************************************ARDUINO OTA SETUP**********************************************************
+        ArduinoOTA.setHostname("esp32Cam");
+        ArduinoOTA
+            .onStart([]() {
+                String type;
+                if (ArduinoOTA.getCommand() == U_FLASH)
+                    type = "sketch";
+                else  // U_SPIFFS
+                    type = "filesystem";
+
+                // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+                Serial.println("Start updating " + type);
+            })
+            .onEnd([]() {
+                Serial.println("\nEnd");
+            })
+            .onProgress([](unsigned int progress, unsigned int total) {
+                Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+            })
+            .onError([](ota_error_t error) {
+                Serial.printf("Error[%u]: ", error);
+                if (error == OTA_AUTH_ERROR)
+                    Serial.println("Auth Failed");
+                else if (error == OTA_BEGIN_ERROR)
+                    Serial.println("Begin Failed");
+                else if (error == OTA_CONNECT_ERROR)
+                    Serial.println("Connect Failed");
+                else if (error == OTA_RECEIVE_ERROR)
+                    Serial.println("Receive Failed");
+                else if (error == OTA_END_ERROR)
+                    Serial.println("End Failed");
+            });
+        ArduinoOTA.begin();
+    }
 
     xTaskCreatePinnedToCore(
         TaskBasiccode,   /* Task function. */
@@ -2341,6 +2373,7 @@ void loop() {
     while (1) {
         webSocket.loop();
         webServer.handleClient();
+        ArduinoOTA.handle();
 #ifdef SERIALBASIC
         if (Serial.available()) {
             streamKeyboard.write(Serial.read());
