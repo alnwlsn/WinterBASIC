@@ -2105,10 +2105,8 @@ static void outchar(unsigned char c) {
     } else
 #endif                  /* ENABLE_EEPROM */
 #endif                  /* ARDUINO */
-        if (c == 13) {  //pause for a short time on a newline, just like real basic
-        delay(50);
-    }
     streamScreen.write(c);
+    delay(1); //short delay between charactrs printed to the screen
 
 #else
     putchar(c);
@@ -2190,11 +2188,12 @@ void cmd_Files(void) {
 /***************************************************************************************************************************************************************/
 /***************************************************************************************************************************************************************/
 #define SERIALBASIC  //define this for using serial terminal in basic
+#define websocketLineLength 64 //a print line longer than this will be split
 void loop() {
     delay(1000);
     Serial.print("Loop running on core ");
     Serial.println(xPortGetCoreID());
-    char outputLine[256];
+    char outputLine[websocketLineLength+2];
     uint16_t outputLineIndex = 0;
     while (1) {
         webSocket.loop();
@@ -2211,8 +2210,10 @@ void loop() {
             if (c != 13) {  //ignoring CR
                 outputLine[outputLineIndex] = c;
                 outputLineIndex++;
-                if (outputLineIndex >= sizeof(outputLine)) {
-                    outputLineIndex = sizeof(outputLine) - 1;
+                if (outputLineIndex >= websocketLineLength) {
+                    outputLine[outputLineIndex] = 10;  
+                    outputLineIndex++;
+                    c = 10;
                 }
                 if (c == 10) {
                     //done building the line
