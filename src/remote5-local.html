@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="UTF-8">
+	<title>Wilson Robot Remote Contol</title>
+	<style>
+		.gridct {
+			margin: auto;
+			width: 540px;
+			height: 360px;
+			border: 2px solid teal;
+			display: grid;
+			grid-template-columns: repeat(9, 60px);
+			grid-template-rows: repeat(6, 60px);
+			justify-items: center;
+			align-items: center;
+		}
+
+		.headerct {
+			margin: auto;
+			margin-bottom: 2px;
+			width: 540px;
+			border: 2px solid teal;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			text-align: center;
+			color: white;
+		}
+
+		.footerct {
+			margin: auto;
+			margin-bottom: 2px;
+			width: 540px;
+			border: 2px solid teal;
+			color: white;
+		}
+
+		.tile {
+			/*border: 1px solid green;*/
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			text-align: center;
+			color: white;
+			width: 55px;
+			height: 55px;
+		}
+
+		.tilebutton {
+			width: 100%;
+			height: 100%;
+			text-align: center;
+		}
+	</style>
+</head>
+
+<body bgcolor="black">
+	<div class="headerct" style="height: 50px; font-size: 20px">
+		Wilson Rover Controls v5
+	</div>
+	<div class="headerct" style="height: 50px">
+		<input type="button" style="width: 70px; height: 25px" value="Reload" onclick="refresh()"></input>
+		<select style="width: 100px" onchange="rovSelect()" id="rovselection">
+			<option value="null">select</option>
+		</select>
+		<span style="width: 10px">Status:&nbsp;<span id="constat">waiting...</span></span>
+	</div>
+	<div class="gridct">
+		<div class="tile">Drive Time</div>
+		<div class="tile"><input type="button" class="tilebutton" value="20" onclick="dtime(this.value)"></input></div>
+		<div class="tile"><input type="button" class="tilebutton" value="50" onclick="dtime(this.value)"></input></div>
+		<div class="tile"><input type="button" class="tilebutton" value="100" onclick="dtime(this.value)"></input></div>
+		<div class="tile"><input type="button" class="tilebutton" value="200" onclick="dtime(this.value)"></input></div>
+		<div class="tile"><input type="button" class="tilebutton" value="500" onclick="dtime(this.value)"></input></div>
+		<div class="tile"><input type="button" class="tilebutton" value="1000" onclick="dtime(this.value)"></input>
+		</div>
+		<div class="tile"><input type="button" class="tilebutton" value="2000" onclick="dtime(this.value)"></input>
+		</div>
+		<div class="tile" style="color: yellow" id="dtime_d"></div>
+		<div class="tile">Turn Time</div>
+		<div class="tile"><input type="button" class="tilebutton" value="20" onclick="ttime(this.value)"></input></div>
+		<div class="tile"><input type="button" class="tilebutton" value="50" onclick="ttime(this.value)"></input></div>
+		<div class="tile"><input type="button" class="tilebutton" value="100" onclick="ttime(this.value)"></input></div>
+		<div class="tile"><input type="button" class="tilebutton" value="200" onclick="ttime(this.value)"></input></div>
+		<div class="tile"><input type="button" class="tilebutton" value="500" onclick="ttime(this.value)"></input></div>
+		<div class="tile"><input type="button" class="tilebutton" value="1000" onclick="ttime(this.value)"></input>
+		</div>
+		<div class="tile"><input type="button" class="tilebutton" value="2000" onclick="ttime(this.value)"></input>
+		</div>
+		<div class="tile" style="color: yellow" id="ttime_d"></div>
+		<div class="tile"></div>
+		<div class="tile"></div>
+		<div class="tile"></div>
+		<div class="tile"></div>
+		<div class="tile"></div>
+		<div class="tile"></div>
+		<div class="tile"></div>
+		<div class="tile"></div>
+		<div class="tile"></div>
+		<div class="tile"></div>
+		<div class="tile"></div>
+		<div class="tile"><input type="button" class="tilebutton" value="FWD" onclick="drive(1,1)"></input></div>
+		<div class="tile"></div>
+		<div class="tile"></div>
+		<div class="tile"><input type="button" class="tilebutton" value="OPEN" onclick="claw(0)"></input></div>
+		<div class="tile"><input type="button" class="tilebutton" value="CLOSE" onclick="claw(1)"></input></div>
+		<div class="tile"></div>
+		<div class="tile"></div>
+		<div class="tile"></div>
+		<div class="tile"><input type="button" class="tilebutton" value="LEFT" onclick="drive(-1,1)"></input></div>
+		<div class="tile"><input type="button" class="tilebutton" value="STOP" onclick="drive(0,0)"></input></div>
+		<div class="tile"><input type="button" class="tilebutton" value="RIGHT" onclick="drive(1,-1)"></input></div>
+		<div class="tile"></div>
+		<div class="tile"></div>
+		<div class="tile"></div>
+		<div class="tile"></div>
+		<div class="tile"></div>
+		<div class="tile"></div>
+		<div class="tile"></div>
+		<div class="tile"><input type="button" class="tilebutton" value="REV" onclick="drive(-1,-1)"></input></div>
+		<div class="tile"></div>
+		<div class="tile"></div>
+		<div class="tile"><!--<input type="button" class="tilebutton" value="L OFF" onclick="led(0)"></input>--></div>
+		<div class="tile"><!--<input type="button" class="tilebutton" value="L ON" onclick="led(1)"></input>--></div>
+
+
+	</div>
+	<div class="footerct">
+		<div style="margin: 10px">
+			Operating Instructions:<br>
+			1. Claim a rover from the dropdown list above<br>
+			2. Use control buttons to operate<br>
+			<br>- FWD, LEFT, RIGHT, REV, STOP operate drive motors
+			<br>- Drive Time specifies time when moving forwards or reverse
+			<br>- Turn Time specifies time when turning left and right
+			<br>- OPEN / CLOSE operates a claw in the front of the rover
+			<!--<br>- L ON / L OFF turns on and off a headlight LED (do not use)-->
+			<br>
+			<br>- Keys W A S D [Space] may be used in place of the motion buttons
+			<br>- Keys E / R can be used to close / open the claw
+			<br>
+			<br>- If your camera feed freezes, use Q key (or click Reload button) to refresh it
+			<br>
+			<br>- Press Unlock button when finished to unclaim rover
+
+		</div>
+	</div>
+	<script>
+		var rovname = "none"
+		var ttime_val = 0
+		var dtime_val = 0
+		function refresh() {
+			st = JSON.stringify({ "reqtype": "refresh", "name": rovname })
+			websocket.send(st);
+		}
+		function ttime(val) {
+			ttime_val = val;
+			document.getElementById("ttime_d").innerHTML = ttime_val + "ms";
+		}
+		function dtime(val) {
+			dtime_val = val;
+			document.getElementById("dtime_d").innerHTML = dtime_val + "ms";
+		}
+		function drive(l, r) {
+			dt = 0;
+			if (l == r) {
+				dt = dtime_val;
+			} else {
+				dt = ttime_val;
+			}
+			st = JSON.stringify({ "reqtype": "drive", "name": rovname, "l": l, "r": r, "t": dt })
+			websocket.send(st);
+		}
+		function claw(val) {
+			st = JSON.stringify({ "reqtype": "claw", "name": rovname, "v": val })
+			websocket.send(st);
+		}
+		function led(val) {
+			st = JSON.stringify({ "reqtype": "led", "name": rovname, "v": val })
+			websocket.send(st);
+		}
+
+		function rovSelect() { //selection of a rover using the dropdown
+			if (rovname != "none") {
+				st = JSON.stringify({ "reqtype": "rovunlock", "name": rovname })
+				websocket.send(st);
+				rovname = "none"
+				document.getElementById("constat").innerHTML = "Idle"
+			}
+			var ix = document.getElementById("rovselection").selectedIndex;
+			var rovselection = document.getElementById("rovselection").options;
+			rovname = rovselection[ix].value;
+			if (rovname != "none") {
+				document.getElementById("constat").innerHTML = rovname
+				st = JSON.stringify({ "reqtype": "rovlock", "name": rovname })
+				websocket.send(st);
+			}
+		}
+
+		var websocket = new WebSocket("ws://192.168.77.1:1977/");
+		websocket.onmessage = function (event) {
+			data = JSON.parse(event.data);
+			if ('rovlockstat' in data) { //response for which units are locked out
+				content = "<option value=\"none\">none</option>";
+				var sel = 0;
+				for (x in data.rovlockstat) {
+					content = content + '<option value="'
+						+ data.rovlockstat[x].name + '" ';
+					if (data.rovlockstat[x].lock == true) {
+						content = content + 'disabled="disabled"';
+					};
+					content = content + '>' + data.rovlockstat[x].name + '</option>'
+					//now, make the box show the selection we chose
+					if (rovname == data.rovlockstat[x].name) {
+						sel = +x + +1;
+					}
+				}
+				if(sel==0&&rovname!="none"){
+					//if we get here, our rover was lost probably
+					rovname = "none"
+					document.getElementById("constat").innerHTML = "Idle"
+				}
+				document.getElementById("rovselection").innerHTML = content;
+				document.getElementById("rovselection").selectedIndex = sel;
+			}
+		}
+		websocket.onopen = function () {
+			document.getElementById("constat").innerHTML = "Idle"
+			document.getElementById("constat").style.color = 'LightGreen';
+			st = JSON.stringify({ "reqtype": "rovlockstat" })
+			websocket.send(st);
+		}
+
+		document.addEventListener("keypress", function onEvent(event) {
+			switch (event.key) {
+				case 'q':
+				case 'Q':
+					refresh();
+					break;
+				case 'w':
+				case 'W':
+					drive(1, 1);
+					break;
+				case 'a':
+				case 'A':
+					drive(-1, 1);
+					break;
+				case 's':
+				case 'S':
+					drive(-1, -1);
+					break;
+				case 'd':
+				case 'D':
+					drive(1, -1);
+					break;
+				case ' ':
+					drive(0, 0);
+					break;
+				case 'r':
+				case 'R':
+					claw(0);
+					break;
+				case 'e':
+				case 'E':
+					claw(1);
+					break;
+			}
+		});
+
+		dtime(200);
+		ttime(100);
+
+	</script>
+</body>
+
+</html>
