@@ -1,10 +1,58 @@
 #include <Arduino.h>
 #include <LoopbackStream.h>
-#include <WebSocketsServer.h>
+#include <SPIFFS.h>
+#include <webServer.h>
+#include <webSocketsServer.h>
 #include <WiFi.h>
-#include <WiFiClientSecure.h>
+#include <WiFiClient.h>
 
 WebSocketsServer webSocket = WebSocketsServer(81);
+
+WebServer webServer(80);
+File fsUploadFile;
+
+//***********************************WEB SERVER FUNCTIONS**********************************
+String getContentType(String filename) {
+    if (webServer.hasArg("download")) {
+        return "application/octet-stream";
+    } else if (filename.endsWith(".htm")) {
+        return "text/html";
+    } else if (filename.endsWith(".html")) {
+        return "text/html";
+    } else if (filename.endsWith(".css")) {
+        return "text/css";
+    } else if (filename.endsWith(".js")) {
+        return "application/javascript";
+    } else if (filename.endsWith(".png")) {
+        return "image/png";
+    } else if (filename.endsWith(".gif")) {
+        return "image/gif";
+    } else if (filename.endsWith(".jpg")) {
+        return "image/jpeg";
+    } else if (filename.endsWith(".ico")) {
+        return "image/x-icon";
+    } else if (filename.endsWith(".xml")) {
+        return "text/xml";
+    } else if (filename.endsWith(".pdf")) {
+        return "application/x-pdf";
+    } else if (filename.endsWith(".zip")) {
+        return "application/x-zip";
+    } else if (filename.endsWith(".gz")) {
+        return "application/x-gzip";
+    }
+    return "text/plain";
+}
+
+bool exists(String path) {
+    bool yes = false;
+    File file = SPIFFS.open(path, "r");
+    if (!file.isDirectory()) {
+        yes = true;
+    }
+    file.close();
+    return yes;
+}
+//**********************************END OF WEB SERVER FUNCTIONS****************************
 
 #define SerialDebug Serial
 
@@ -1999,6 +2047,101 @@ void setup() {
     webSocket.begin();
     webSocket.onEvent(webSocketEvent);
 
+    //************************************PRETTY MUCH THE ENTIRE WEB SERVER CODE************************************************
+    {
+        SPIFFS.begin();
+        webServer.on("/files", HTTP_GET, []() {
+            String content = F("<html><head><style>a{color:#f3bf00;}body{background-color:#000000;color:#f3bf00;}table{border-collapse:collapse;}td,th{border: 1px solid #f3bf00;}input[type=text]{background-color:#000000;color:#f3bf00;border: 1px solid #f3bf00;width:6em;}</style></head><body><h1>File list</h1><table><tr><th>Delete</th><th>Size</th><th>Filename</th></tr>");
+            File root = SPIFFS.open("/");
+            if (root.isDirectory()) {
+                File file = root.openNextFile();
+                while (file) {
+                    String fileName = String(file.name()).substring(1);
+                    String fileSize = String(file.size()).substring(1);
+                    content += F("<tr><td><a href=\"/delete?n=");  //make delete link
+                    content += fileName;
+                    content += F("\">rm</a></td><td>");
+                    content += fileSize;                  //print file size
+                    content += F("</td><td><a href=\"");  //make a link to the file
+                    content += fileName;
+                    content += F("\">");
+                    content += fileName;
+                    content += F("</a></td></tr>");
+                    file = root.openNextFile();
+                }
+            }
+            content += F("</table><br><form method='POST' action='/upload' enctype='multipart/form-data'><input type='file' name='payload'><input type='submit' value='Upload'></form></body></html>");
+            webServer.sendHeader(F("Connection"), F("close"));
+            webServer.sendHeader(F("Access-Control-Allow-Origin"), F("*"));
+            webServer.send(200, F("text/html"), content);
+        });
+        webServer.on(
+            "/upload", HTTP_POST, []() { webServer.send(200, F("text/html"), F("<html><head><meta http-equiv=\"refresh\" content=\"0; url=/files\" /></head></html>")); }, []() {
+      HTTPUpload& upload = webServer.upload();
+    if (upload.status == UPLOAD_FILE_START) {
+        String filename = upload.filename;
+        if (!filename.startsWith("/")) {
+            filename = "/" + filename;
+        }
+        //DBG_OUTPUT_PORT.print("handleFileUpload Name: ");
+        //DBG_OUTPUT_PORT.println(filename);
+        fsUploadFile = SPIFFS.open(filename, "w");
+        filename = String();
+    } else if (upload.status == UPLOAD_FILE_WRITE) {////DBG_OUTPUT_PORT.print("handleFileUpload Data: "); //DBG_OUTPUT_PORT.println(upload.currentSize);
+        if (fsUploadFile) {
+            fsUploadFile.write(upload.buf, upload.currentSize);
+        }
+    } else if (upload.status == UPLOAD_FILE_END) {
+        if (fsUploadFile) {
+            fsUploadFile.close();
+        }
+        //DBG_OUTPUT_PORT.print("handleFileUpload Size: ");
+        //DBG_OUTPUT_PORT.println(upload.totalSize);
+    } });
+        webServer.on("/delete", HTTP_GET, []() {
+            String path = String(F("/")) + webServer.arg(F("n"));
+            Serial.print(path);
+            if (SPIFFS.exists(path)) {
+                SPIFFS.remove(path);
+            }
+            webServer.sendHeader(F("Connection"), F("close"));
+            webServer.sendHeader(F("Access-Control-Allow-Origin"), F("*"));
+            webServer.send(200, F("text/html"), F("<html><head><meta http-equiv=\"refresh\" content=\"0; url=/files\" /></head></html>"));
+        });
+        webServer.on("/format", HTTP_GET, []() {
+            SPIFFS.format();
+            webServer.sendHeader(F("Connection"), F("close"));
+            webServer.sendHeader(F("Access-Control-Allow-Origin"), F("*"));
+            webServer.send(200, F("text/html"), F("<html><head><meta http-equiv=\"refresh\" content=\"0; url=/files\" /></head></html>"));
+        });
+        webServer.on("/", HTTP_GET, []() {
+            if (exists(F("/index.html"))) {
+                File file = SPIFFS.open(F("/index.html"), "r");
+                webServer.streamFile(file, F("text/html"));
+                file.close();
+            } else {
+                webServer.send(404, F("text/plain"), F("No index.html"));
+            }
+        });
+        webServer.onNotFound([]() {  //called when the url is not defined here; use it to load content from SPIFFS
+            String path = webServer.uri();
+            //DBG_OUTPUT_PORT.println("handleFileRead: " + path);
+            if (path.endsWith("/")) {
+                path += "index.htm";
+            }
+            String contentType = getContentType(path);
+            if (exists(path)) {
+                File file = SPIFFS.open(path, "r");
+                webServer.streamFile(file, contentType);
+                file.close();
+            } else {
+                webServer.send(404, F("text/plain"), F("FileNotFound"));
+            }
+        });
+        webServer.begin();
+    }
+    //****************************************************END OF WEB SERVER CODE************************************************
+
     xTaskCreatePinnedToCore(
         TaskBasiccode,   /* Task function. */
         "TinyBasicPlus", /* name of task. */
@@ -2103,10 +2246,10 @@ static void outchar(unsigned char c) {
         if (outStream == kStreamEEProm) {
         EEPROM.write(eepos++, c);
     } else
-#endif                  /* ENABLE_EEPROM */
-#endif                  /* ARDUINO */
-    streamScreen.write(c);
-    delay(1); //short delay between charactrs printed to the screen
+#endif /* ENABLE_EEPROM */
+#endif /* ARDUINO */
+        streamScreen.write(c);
+    delay(2);  //short delay between charactrs printed to the screen
 
 #else
     putchar(c);
@@ -2185,18 +2328,19 @@ void cmd_Files(void) {
 }
 #endif
 
+/*****************************************************************************OTHER FUNCTIONS**********************************************************************************/
 /***************************************************************************************************************************************************************/
-/***************************************************************************************************************************************************************/
-#define SERIALBASIC  //define this for using serial terminal in basic
-#define websocketLineLength 64 //a print line longer than this will be split
+//#define SERIALBASIC             //define this for using serial terminal in basic
+#define websocketLineLength 64  //a print line longer than this will be split
 void loop() {
     delay(1000);
     Serial.print("Loop running on core ");
     Serial.println(xPortGetCoreID());
-    char outputLine[websocketLineLength+2];
+    char outputLine[websocketLineLength + 2];
     uint16_t outputLineIndex = 0;
     while (1) {
         webSocket.loop();
+        webServer.handleClient();
 #ifdef SERIALBASIC
         if (Serial.available()) {
             streamKeyboard.write(Serial.read());
@@ -2211,7 +2355,7 @@ void loop() {
                 outputLine[outputLineIndex] = c;
                 outputLineIndex++;
                 if (outputLineIndex >= websocketLineLength) {
-                    outputLine[outputLineIndex] = 10;  
+                    outputLine[outputLineIndex] = 10;
                     outputLineIndex++;
                     c = 10;
                 }

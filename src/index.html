@@ -86,9 +86,10 @@
 		color: #eeee00; background-color: #000000; font-size:14px; font-family: 'Courier New', monospace;"">
 	</div>
 	<script>
+		console.log(location.host);
 		var screenMem = "";
 		var screenLinesLimit = 25;
-		var websocket = new WebSocket("ws://192.168.1.117:81/");
+		var websocket = new WebSocket("ws://"+location.host+":81/");
 		websocket.onmessage = function (event) {
 			screenMem += event.data;
 			document.getElementById("screenText").innerHTML = screenMem
