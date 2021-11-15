@@ -57,8 +57,8 @@ bool exists(String path) {
 
 #define SerialDebug Serial
 
-LoopbackStream streamKeyboard(1024);
-LoopbackStream streamScreen(1024);
+LoopbackStream streamKeyboard(256);
+LoopbackStream streamScreen(256);
 
 TaskHandle_t TaskBasic;
 
@@ -285,19 +285,8 @@ char eliminateCompileErrors = 1;  // fix to suppress arduino build errors
 int eepos = 0;
 #endif
 
-// SD card File io
-#ifdef ENABLE_FILEIO
-#include <SD.h>
-#include <SPI.h> /* needed as of 1.5 beta */
-
-// set this to the card select for your Arduino SD shield
-#define kSD_CS 10
-
-#define kSD_Fail 0
-#define kSD_OK 1
-
+//for saving/loading basic programs from SPIFFS
 File fp;
-#endif
 
 // set up our RAM buffer size for program and user input
 // NOTE: This number will have to change if you include other libraries.
@@ -1899,45 +1888,38 @@ void TaskBasiccode(void *pvParameters) {
         goto unimplemented;
 #endif  // ENABLE_FILEIO
 
-    save :
+    save:
         // save from memory out to a file
-#ifdef ENABLE_FILEIO
-    {
-        unsigned char *filename;
+        {
+            unsigned char *filename;
 
-        // Work out the filename
-        expression_error = 0;
-        filename = filenameWord();
-        if (expression_error)
-            goto qwhat;
+            // Work out the filename
+            expression_error = 0;
+            filename = filenameWord();
+            if (expression_error)
+                goto qwhat;
 
-#ifdef ARDUINO
-        // remove the old file if it exists
-        if (SD.exists((char *)filename)) {
-            SD.remove((char *)filename);
+            // remove the old file if it exists
+            String path = String(F("/")) + String((char *)filename) + String(F(".bas"));
+            if (SPIFFS.exists(path)) {
+                SPIFFS.remove(path);
+            }
+
+            // open the file, switch over to file output
+            fp = SPIFFS.open(path, FILE_WRITE);
+            outStream = kStreamFile;
+
+            // copied from "List"
+            list_line = findline();
+            while (list_line != program_end)
+                printline();
+
+            // go back to standard output, close the file
+            outStream = kStreamSerial;
+
+            fp.close();
+            goto warmstart;
         }
-
-        // open the file, switch over to file output
-        fp = SD.open((const char *)filename, FILE_WRITE);
-        outStream = kStreamFile;
-
-        // copied from "List"
-        list_line = findline();
-        while (list_line != program_end)
-            printline();
-
-        // go back to standard output, close the file
-        outStream = kStreamSerial;
-
-        fp.close();
-#else   // ARDUINO \
-        // desktop
-#endif  // ARDUINO
-        goto warmstart;
-    }
-#else   // ENABLE_FILEIO
-        goto unimplemented;
-#endif  // ENABLE_FILEIO
 
     rseed : {
         short int value;
@@ -2039,7 +2021,7 @@ void setup() {
 #endif /* ARDUINO */
 
     WiFi.mode(WIFI_STA);
-    WiFi.begin("9515N", "velvet10");
+    WiFi.begin("rhombus", "blindhike77");
     while (WiFi.status() != WL_CONNECTED) {
         Serial.print('.');
         delay(1000);
@@ -2208,7 +2190,6 @@ static int inchar() {
 
     switch (inStream) {
         case (kStreamFile):
-#ifdef ENABLE_FILEIO
             v = fp.read();
             if (v == NL) v = CR;  // file translate
             if (!fp.available()) {
@@ -2216,8 +2197,6 @@ static int inchar() {
                 goto inchar_loadfinish;
             }
             return v;
-#else
-#endif
             break;
         case (kStreamEEProm):
 #ifdef ENABLE_EEPROM
@@ -2267,12 +2246,10 @@ static void outchar(unsigned char c) {
     if (inhibitOutput) return;
 
 #ifdef ARDUINO
-#ifdef ENABLE_FILEIO
     if (outStream == kStreamFile) {
         // output to a file
         fp.write(c);
     } else
-#endif
 #ifdef ARDUINO
 #ifdef ENABLE_EEPROM
         if (outStream == kStreamEEProm) {
@@ -2281,7 +2258,10 @@ static void outchar(unsigned char c) {
 #endif /* ENABLE_EEPROM */
 #endif /* ARDUINO */
         streamScreen.write(c);
-    delay(2);  //short delay between charactrs printed to the screen
+    if (c == 10) {
+        delay(11);  //a bit longer delay for lines
+    }
+    delay(1);  //short delay between charactrs printed to the screen
 
 #else
     putchar(c);
@@ -2427,6 +2407,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
                     break;
                 }
                 streamKeyboard.write(c);
+                delay(1);  //delay here seems to help?
                 // Serial.print(index);
                 // Serial.print(' ');
                 // Serial.println(c);
