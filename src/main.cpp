@@ -1857,37 +1857,25 @@ void TaskBasiccode(void *pvParameters) {
     load:
         // clear the program
         program_end = program_start;
-
         // load from a file into memory
-#ifdef ENABLE_FILEIO
         {
             unsigned char *filename;
-
             // Work out the filename
             expression_error = 0;
             filename = filenameWord();
             if (expression_error)
                 goto qwhat;
-
-#ifdef ARDUINO
             // Arduino specific
-            if (!SD.exists((char *)filename)) {
+            String path = String(F("/")) + String((char *)filename) + String(F(".bas"));
+            if (!SPIFFS.exists(path)) {
                 printmsg(sdfilemsg);
             } else {
-                fp = SD.open((const char *)filename);
+                fp = SPIFFS.open(path);
                 inStream = kStreamFile;
                 inhibitOutput = true;
             }
-#else   // ARDUINO \
-        // Desktop specific
-#endif  // ARDUINO \
-    // this will kickstart a series of events to read in from the file.
         }
         goto warmstart;
-#else   // ENABLE_FILEIO
-        goto unimplemented;
-#endif  // ENABLE_FILEIO
-
     save:
         // save from memory out to a file
         {
@@ -2223,7 +2211,7 @@ static int inchar() {
 inchar_loadfinish:
     inStream = kStreamSerial;
     inhibitOutput = false;
-
+    printmsg(okmsg);
     if (runAfterLoad) {
         runAfterLoad = false;
         triggerRun = true;
@@ -2342,7 +2330,7 @@ void cmd_Files(void) {
 
 /*****************************************************************************OTHER FUNCTIONS**********************************************************************************/
 /***************************************************************************************************************************************************************/
-//#define SERIALBASIC             //define this for using serial terminal in basic
+#define SERIALBASIC             //define this for using serial terminal in basic
 #define websocketLineLength 64  //a print line longer than this will be split
 void loop() {
     delay(1000);
