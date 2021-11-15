@@ -1,4 +1,4 @@
-//#define SERIALBASIC             //define this for using serial terminal in basic
+#define SERIALBASIC             //define this for using serial terminal in basic
 #define websocketLineLength 64  //a print line longer than this will be split
 //#define USEWEBSERVER            //you can comment these out to save compile time
 //#define USEOTA
@@ -1914,6 +1914,7 @@ void TaskBasiccode(void *pvParameters) {
 
             // go back to standard output, close the file
             outStream = kStreamSerial;
+            Serial.println(F("Done with save..."));
 
             fp.close();
             goto warmstart;
@@ -2246,36 +2247,14 @@ inchar_loadfinish:
 /***********************************************************/
 static void outchar(unsigned char c) {
     if (inhibitOutput) return;
-
-#ifdef ARDUINO
     if (outStream == kStreamFile) {
         // output to a file
         fp.write(c);
-    } else
-#ifdef ARDUINO
-#ifdef ENABLE_EEPROM
-        if (outStream == kStreamEEProm) {
-        EEPROM.write(eepos++, c);
-    } else
-#endif /* ENABLE_EEPROM */
-#endif /* ARDUINO */
+    } else {
         while (!streamScreen.availableForWrite())
             ;
     streamScreen.write(c);
-    // static uint8_t lineDelayCounter=0;
-    // lineDelayCounter++;
-    // if(lineDelayCounter>=websocketLineLength){ //artificially introduce some delay after not seeing a newline for a while, to let the buffer catch up.
-    //     delay(10);
-    // }
-    // if (c == 10) {
-    //     delay(11);  //a bit longer delay for lines
-    //     lineDelayCounter=0;
-    // }
-    // delay(1);  //short delay between charactrs printed to the screen
-
-#else
-    putchar(c);
-#endif
+    }
 }
 
 /***********************************************************/
@@ -2414,6 +2393,10 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
         case WStype_CONNECTED: {
             IPAddress ip = webSocket.remoteIP(num);
             SerialDebug.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+            streamScreen.println((char *)initmsg);
+            streamScreen.print(variables_begin - program_end);
+            streamScreen.print(F(" bytes free.\n"));
+            streamKeyboard.print('\n');
             //webSocket.sendTXT(num, "Connected");
         } break;
         case WStype_TEXT: {
