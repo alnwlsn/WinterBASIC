@@ -440,6 +440,7 @@ const static unsigned char keywords[] = {
     'S', 'T', 'O', 'P' + 0x80,
     'B', 'Y', 'E' + 0x80,
     'F', 'I', 'L', 'E', 'S' + 0x80,
+    'K', 'I', 'L', 'L' + 0x80,
     'M', 'E', 'M' + 0x80,
     '?' + 0x80,
     '\'' + 0x80,
@@ -487,6 +488,7 @@ enum {
     KW_STOP,
     KW_BYE,
     KW_FILES,
+    KW_KILL,
     KW_MEM,
     KW_QMARK,
     KW_QUOTE,
@@ -611,6 +613,7 @@ static const unsigned char backspacemsg[] = "\b \b";
 static const unsigned char indentmsg[] = "    ";
 static const unsigned char sderrormsg[] = "SD card error.";
 static const unsigned char sdfilemsg[] = "SD file error.";
+static const unsigned char sdnofile[] = "No such File.";
 static const unsigned char dirextmsg[] = "(dir)";
 static const unsigned char slashmsg[] = "/";
 static const unsigned char spacemsg[] = " ";
@@ -1322,6 +1325,8 @@ void TaskBasiccode(void *pvParameters) {
 
             case KW_FILES:
                 goto files;
+            case KW_KILL:
+                goto kill;
             case KW_LIST:
                 goto list;
             case KW_CHAIN:
@@ -1870,7 +1875,7 @@ void TaskBasiccode(void *pvParameters) {
             // Arduino specific
             String path = String(F("/")) + String((char *)filename) + String(F(".bas"));
             if (!SPIFFS.exists(path)) {
-                printmsg(sdfilemsg);
+                printmsg(sdnofile);
             } else {
                 fp = SPIFFS.open(path);
                 inStream = kStreamFile;
@@ -1911,6 +1916,23 @@ void TaskBasiccode(void *pvParameters) {
             fp.close();
             goto warmstart;
         }
+    kill:
+        {
+            unsigned char *filename;
+            // Work out the filename
+            expression_error = 0;
+            filename = filenameWord();
+            if (expression_error)
+                goto qwhat;
+            // Arduino specific
+            String path = String(F("/")) + String((char *)filename) + String(F(".bas"));
+            if (SPIFFS.exists(path)) {
+                SPIFFS.remove(path);
+            } else {
+                printmsg(sdnofile);
+            }
+        }
+        goto warmstart;
 
     rseed : {
         short int value;
