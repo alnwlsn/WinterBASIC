@@ -127,7 +127,7 @@ TaskHandle_t TaskBasic;
 //    down the whole thing so we can get back to implementing
 //    features instead of licenses.  Thank you for your time.
 
-#define kVersion "v0.15"
+#define kVersion "v0.15W"
 
 // v0.15: 2018-06-23
 //      Integrating some contributions
@@ -371,12 +371,9 @@ typedef unsigned char byte;
 
 ////////////////////
 
-#ifdef ENABLE_FILEIO
 // functions defined elsehwere
 void cmd_Files(void);
 unsigned char *filenameWord(void);
-static boolean sd_is_initialized = false;
-#endif
 
 // some settings based things
 
@@ -1265,9 +1262,9 @@ void TaskBasiccode(void *pvParameters) {
         }
         goto prompt;
 
-    unimplemented:
-        printmsg(unimplimentedmsg);
-        goto prompt;
+    // unimplemented:
+    //     printmsg(unimplimentedmsg);
+    //     goto prompt;
 
     qhow:
         printmsg(howmsg);
@@ -1853,13 +1850,8 @@ void TaskBasiccode(void *pvParameters) {
     files:
         // display a listing of files on the device.
         // version 1: no support for subdirectories
-
-#ifdef ENABLE_FILEIO
         cmd_Files();
         goto warmstart;
-#else
-        goto unimplemented;
-#endif  // ENABLE_FILEIO
 
     chain:
         runAfterLoad = true;
@@ -2037,8 +2029,8 @@ void setup() {
             if (root.isDirectory()) {
                 File file = root.openNextFile();
                 while (file) {
-                    String fileName = String(file.name()).substring(1);
-                    String fileSize = String(file.size()).substring(1);
+                    String fileName = String(file.name()).substr(1);
+                    String fileSize = String(file.size());
                     content += F("<tr><td><a href=\"/delete?n=");  //make delete link
                     content += fileName;
                     content += F("\">rm</a></td><td>");
@@ -2050,7 +2042,10 @@ void setup() {
                     content += F("</a></td></tr>");
                     file = root.openNextFile();
                 }
+                file.close();
             }
+            root.close();
+
             content += F("</table><br><form method='POST' action='/upload' enctype='multipart/form-data'><input type='file' name='payload'><input type='submit' value='Upload'></form></body></html>");
             webServer.sendHeader(F("Connection"), F("close"));
             webServer.sendHeader(F("Access-Control-Allow-Origin"), F("*"));
@@ -2253,7 +2248,7 @@ static void outchar(unsigned char c) {
     } else {
         while (!streamScreen.availableForWrite())
             ;
-    streamScreen.write(c);
+        streamScreen.write(c);
     }
 }
 
@@ -2290,44 +2285,53 @@ static int initSD(void) {
 }
 #endif
 
-#if ENABLE_FILEIO
-void cmd_Files(void) {
-    File dir = SD.open("/");
-    dir.seek(0);
-
-    while (true) {
-        File entry = dir.openNextFile();
-        if (!entry) {
-            entry.close();
-            break;
-        }
-
-        // common header
-        printmsgNoNL(indentmsg);
-        printmsgNoNL((const unsigned char *)entry.name());
-        if (entry.isDirectory()) {
-            printmsgNoNL(slashmsg);
-        }
-
-        if (entry.isDirectory()) {
-            // directory ending
-            for (int i = strlen(entry.name()); i < 16; i++) {
-                printmsgNoNL(spacemsg);
+void cmd_Files(void) { //just print .bas filenames, directly to the screen
+    File root = SPIFFS.open("/");
+    if (root.isDirectory()) {
+        File file = root.openNextFile();
+        while (file) {
+            String fileName = String(file.name()).substring(1);
+            if (fileName.endsWith(F("bas"))) {
+                streamScreen.println(fileName.substring(0,fileName.length() - 4));
             }
-            printmsgNoNL(dirextmsg);
-        } else {
-            // file ending
-            for (int i = strlen(entry.name()); i < 17; i++) {
-                printmsgNoNL(spacemsg);
-            }
-            printUnum(entry.size());
+            file = root.openNextFile();
         }
-        line_terminator();
-        entry.close();
+        file.close();
     }
-    dir.close();
+    root.close();
+
+    // while (true) {
+    //     File entry = dir.openNextFile();
+    //     if (!entry) {
+    //         entry.close();
+    //         break;
+    //     }
+
+    //     // common header
+    //     printmsgNoNL(indentmsg);
+    //     printmsgNoNL((const unsigned char *)entry.name());
+    //     if (entry.isDirectory()) {
+    //         printmsgNoNL(slashmsg);
+    //     }
+
+    //     if (entry.isDirectory()) {
+    //         // directory ending
+    //         for (int i = strlen(entry.name()); i < 16; i++) {
+    //             printmsgNoNL(spacemsg);
+    //         }
+    //         printmsgNoNL(dirextmsg);
+    //     } else {
+    //         // file ending
+    //         for (int i = strlen(entry.name()); i < 17; i++) {
+    //             printmsgNoNL(spacemsg);
+    //         }
+    //         printUnum(entry.size());
+    //     }
+    //     line_terminator();
+    //     entry.close();
+    // }
+    // root.close();
 }
-#endif
 
 /*****************************************************************************OTHER FUNCTIONS**********************************************************************************/
 /***************************************************************************************************************************************************************/
