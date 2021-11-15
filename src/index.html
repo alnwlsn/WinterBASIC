@@ -86,7 +86,6 @@
 		color: #eeee00; background-color: #000000; font-size:14px; font-family: 'Courier New', monospace;"">
 	</div>
 	<script>
-		console.log(location.host);
 		var screenMem = "";
 		var screenLinesLimit = 25;
 		var websocket = new WebSocket("ws://"+location.host+":81/");
@@ -113,6 +112,9 @@
 
 		function submitInput() {
 			var w = document.getElementById("inputBox").value
+			// if(w.charAt(0)==">"){ //the > at the beginning is just for looks
+			// 	w = w.substring(1);
+			// }
 			websocket.send(w + "\n");
 			document.getElementById("inputBox").value = ""
 		}

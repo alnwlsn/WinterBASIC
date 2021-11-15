@@ -7,6 +7,9 @@
 #include <webServer.h>
 #include <webSocketsServer.h>
 
+//#define SERIALBASIC             //define this for using serial terminal in basic
+#define websocketLineLength 64  //a print line longer than this will be split
+
 WebSocketsServer webSocket = WebSocketsServer(81);
 
 WebServer webServer(80);
@@ -2245,11 +2248,19 @@ static void outchar(unsigned char c) {
     } else
 #endif /* ENABLE_EEPROM */
 #endif /* ARDUINO */
-        streamScreen.write(c);
-    if (c == 10) {
-        delay(11);  //a bit longer delay for lines
-    }
-    delay(1);  //short delay between charactrs printed to the screen
+        while (!streamScreen.availableForWrite())
+            ;
+    streamScreen.write(c);
+    // static uint8_t lineDelayCounter=0;
+    // lineDelayCounter++;
+    // if(lineDelayCounter>=websocketLineLength){ //artificially introduce some delay after not seeing a newline for a while, to let the buffer catch up.
+    //     delay(10);
+    // }
+    // if (c == 10) {
+    //     delay(11);  //a bit longer delay for lines
+    //     lineDelayCounter=0;
+    // }
+    // delay(1);  //short delay between charactrs printed to the screen
 
 #else
     putchar(c);
@@ -2330,10 +2341,8 @@ void cmd_Files(void) {
 
 /*****************************************************************************OTHER FUNCTIONS**********************************************************************************/
 /***************************************************************************************************************************************************************/
-#define SERIALBASIC             //define this for using serial terminal in basic
-#define websocketLineLength 64  //a print line longer than this will be split
 void loop() {
-    delay(1000);
+    delay(500);
     Serial.print("Loop running on core ");
     Serial.println(xPortGetCoreID());
     char outputLine[websocketLineLength + 2];
@@ -2394,6 +2403,8 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
                 if (c == 0) {
                     break;
                 }
+                while (!streamKeyboard.availableForWrite())
+                    ;
                 streamKeyboard.write(c);
                 delay(1);  //delay here seems to help?
                 // Serial.print(index);
