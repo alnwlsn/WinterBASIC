@@ -450,6 +450,7 @@ const static unsigned char keywords[] = {
     'E', 'N', 'D' + 0x80,
     'R', 'S', 'E', 'E', 'D' + 0x80,
     'C', 'H', 'A', 'I', 'N' + 0x80,
+    'L', 'E', 'D' + 0x80,
 #ifdef ENABLE_TONES
     'T', 'O', 'N', 'E', 'W' + 0x80,
     'T', 'O', 'N', 'E' + 0x80,
@@ -498,6 +499,7 @@ enum {
     KW_END,
     KW_RSEED,
     KW_CHAIN,
+    KW_LED,
 #ifdef ENABLE_TONES
     KW_TONEW,
     KW_TONE,
@@ -1265,9 +1267,9 @@ void TaskBasiccode(void *pvParameters) {
         }
         goto prompt;
 
-    // unimplemented:
-    //     printmsg(unimplimentedmsg);
-    //     goto prompt;
+        // unimplemented:
+        //     printmsg(unimplimentedmsg);
+        //     goto prompt;
 
     qhow:
         printmsg(howmsg);
@@ -1383,6 +1385,8 @@ void TaskBasiccode(void *pvParameters) {
                 goto print;
             case KW_POKE:
                 goto poke;
+            case KW_LED:
+                goto led;
             case KW_END:
             case KW_STOP:
                 // This is the easy way to end - set the current line to the end of program attempt to run it
@@ -1720,6 +1724,20 @@ void TaskBasiccode(void *pvParameters) {
             goto qwhat;
     }
         goto run_next_statement;
+    led : {
+        short int value;
+
+        // Work out where to put it
+        expression_error = 0;
+        value = expression();
+        if (expression_error)
+            goto qwhat;
+        digitalWrite(2, value);
+        // Check that we are at the end of the statement
+        if (*txtpos != NL && *txtpos != ':')
+            goto qwhat;
+    }
+        goto run_next_statement;
 
     list:
         linenum = testnum();  // Retuns 0 if no line found.
@@ -1916,22 +1934,21 @@ void TaskBasiccode(void *pvParameters) {
             fp.close();
             goto warmstart;
         }
-    kill:
-        {
-            unsigned char *filename;
-            // Work out the filename
-            expression_error = 0;
-            filename = filenameWord();
-            if (expression_error)
-                goto qwhat;
-            // Arduino specific
-            String path = String(F("/")) + String((char *)filename) + String(F(".bas"));
-            if (SPIFFS.exists(path)) {
-                SPIFFS.remove(path);
-            } else {
-                printmsg(sdnofile);
-            }
+    kill : {
+        unsigned char *filename;
+        // Work out the filename
+        expression_error = 0;
+        filename = filenameWord();
+        if (expression_error)
+            goto qwhat;
+        // Arduino specific
+        String path = String(F("/")) + String((char *)filename) + String(F(".bas"));
+        if (SPIFFS.exists(path)) {
+            SPIFFS.remove(path);
+        } else {
+            printmsg(sdnofile);
         }
+    }
         goto warmstart;
 
     rseed : {
@@ -1997,6 +2014,7 @@ void TaskBasiccode(void *pvParameters) {
 /***********************************************************/
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length);
 void setup() {
+    pinMode(2, OUTPUT);
 #ifdef ARDUINO
     Serial.begin(kConsoleBaud);  // opens serial port
     while (!Serial)
@@ -2307,14 +2325,14 @@ static int initSD(void) {
 }
 #endif
 
-void cmd_Files(void) { //just print .bas filenames, directly to the screen
+void cmd_Files(void) {  //just print .bas filenames, directly to the screen
     File root = SPIFFS.open("/");
     if (root.isDirectory()) {
         File file = root.openNextFile();
         while (file) {
             String fileName = String(file.name()).substring(1);
             if (fileName.endsWith(F("bas"))) {
-                streamScreen.println(fileName.substring(0,fileName.length() - 4));
+                streamScreen.println(fileName.substring(0, fileName.length() - 4));
             }
             file = root.openNextFile();
         }
