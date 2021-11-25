@@ -1,6 +1,11 @@
 #define SERIALBASIC             //define this for using serial terminal in basic
 #define websocketLineLength 64  //a print line longer than this will be split
 
+const char *ssid = "rhombus";
+const char *pass = "blindhike77";
+const char *softApSsid = "ESP32-1";
+const char *softApPass = "password";
+
 #include <Arduino.h>
 #include <ArduinoOTA.h>
 #include <LoopbackStream.h>
@@ -9,6 +14,8 @@
 #include <WiFiClient.h>
 #include <webServer.h>
 #include <webSocketsServer.h>
+
+uint8_t joystick = 255;  //global variable to store joystick state
 
 WebSocketsServer webSocket = WebSocketsServer(81);
 
@@ -530,13 +537,15 @@ const static unsigned char func_tab[] = {
     'A', 'R', 'E', 'A', 'D' + 0x80,
     'D', 'R', 'E', 'A', 'D' + 0x80,
     'R', 'N', 'D' + 0x80,
+    'J', 'O', 'Y' + 0x80,
     0};
 #define FUNC_PEEK 0
 #define FUNC_ABS 1
 #define FUNC_AREAD 2
 #define FUNC_DREAD 3
 #define FUNC_RND 4
-#define FUNC_UNKNOWN 5
+#define FUNC_JOY 5
+#define FUNC_UNKNOWN 6
 
 const static unsigned char to_tab[] = {
     'T', 'O' + 0x80,
@@ -928,6 +937,8 @@ static short int expr4(void) {
 #else
                 return (rand() % a);
 #endif
+            case FUNC_JOY:
+                return joystick;
         }
     }
 
@@ -2043,13 +2054,23 @@ void setup() {
 
 #endif /* ARDUINO */
 
-    WiFi.mode(WIFI_STA);
-    WiFi.begin("rhombus", "blindhike77");
+    WiFi.mode(WIFI_MODE_APSTA);
+    WiFi.softAP(softApSsid, softApPass);
+    WiFi.begin(ssid, pass);
+    int waitConnectCount = 10;
     while (WiFi.status() != WL_CONNECTED) {
         Serial.print('.');
         delay(1000);
+        waitConnectCount--;
+        if (waitConnectCount == 0) {
+            WiFi.disconnect();
+            Serial.print(F("Given up on connect to AP\r\n"));
+            break;
+        }
     }
     Serial.println(WiFi.localIP());
+    Serial.print("ESP32 IP as soft AP: ");
+    Serial.println(WiFi.softAPIP());
     webSocket.begin();
     webSocket.onEvent(webSocketEvent);
     SPIFFS.begin();
@@ -2433,21 +2454,36 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
             // webSocket.sendTXT(num, "message here");
             // send data to all connected clients
             // webSocket.broadcastTXT("message here");
-            unsigned int index = 0;
+            unsigned int index = 1;
             int8_t c = 0;
-            while (1) {
-                c = payload[index];
-                if (c == 0) {
+            switch (payload[0]) {
+                case 0x12:  //joystick commands
+                    joystick = 0;
+                    for (uint8_t i = 0; i <= 7; i++) {
+                        if (payload[i + 1] & 1) {
+                            joystick |= (1 << i);
+                        }
+                    }
+                    Serial.println(joystick);
                     break;
-                }
-                while (!streamKeyboard.availableForWrite())
-                    ;
-                streamKeyboard.write(c);
-                delay(1);  //delay here seems to help?
-                // Serial.print(index);
-                // Serial.print(' ');
-                // Serial.println(c);
-                index++;
+                case 0x11:  //keyboard text
+                    while (1) {
+                        c = payload[index];
+                        if (c == 0) {
+                            break;
+                        }
+                        while (!streamKeyboard.availableForWrite())
+                            ;
+                        streamKeyboard.write(c);
+                        delay(1);  //delay here seems to help?
+                        // Serial.print(index);
+                        // Serial.print(' ');
+                        // Serial.println(c);
+                        index++;
+                    }
+                    break;
+                default:
+                    break;
             }
             //webSocket.broadcastTXT(payload);
         } break;

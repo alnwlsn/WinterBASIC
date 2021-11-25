@@ -88,7 +88,7 @@
 	<script>
 		var screenMem = "";
 		var screenLinesLimit = 25;
-		var websocket = new WebSocket("ws://192.168.1.117"+location.host+":81/");
+		var websocket = new WebSocket("ws://192.168.4.1"+location.host+":81/");
 		websocket.onmessage = function (event) {
 			screenMem += event.data;
 			document.getElementById("screenText").innerHTML = screenMem
@@ -107,7 +107,24 @@
 		}
 
 		function breakButton() {
-			websocket.send("\x03");
+			websocket.send("\x11\x03");
+		}
+
+		var joystick = 255;
+		var joystickLast = 255;
+		function joystickSend(){
+			if(joystick!=joystickLast){
+				joystickLast = joystick;
+				out = "";
+				for(var i=0;i<=7;i++){
+					if(joystick&(1<<i)){
+						out += "1";
+					}else{
+						out += "0";
+					}
+				}
+				websocket.send("\x12" + out);
+			}
 		}
 
 		function submitInput() {
@@ -115,14 +132,81 @@
 			// if(w.charAt(0)==">"){ //the > at the beginning is just for looks
 			// 	w = w.substring(1);
 			// }
-			websocket.send(w + "\n");
+			websocket.send("\x11" + w + "\n");
 			document.getElementById("inputBox").value = ""
 		}
-
-		document.addEventListener("keypress", function onEvent(event) {
+		document.addEventListener("keyup", function onEvent(event2) {
+			switch (event2.key) {
+				case "ArrowUp":
+					joystick |= 0x01;
+					joystickSend();
+					break;
+				case "ArrowDown":
+					joystick |= 0x02;
+					joystickSend();
+					break;
+				case "ArrowLeft":
+					joystick |= 0x04;
+					joystickSend();
+					break;
+				case "ArrowRight":
+					joystick |= 0x08;
+					joystickSend();
+					break;
+				case "1":
+					joystick |= 0x10;
+					joystickSend();
+					break;
+				case "2":
+					joystick |= 0x20;
+					joystickSend();
+					break;
+				case "3":
+					joystick |= 0x40;
+					joystickSend();
+					break;
+				case "4":
+					joystick |= 0x80;
+					joystickSend();
+					break;
+			}
+		});
+		document.addEventListener("keydown", function onEvent(event) {
 			switch (event.key) {
 				case 'Enter':
 					submitInput()
+					break;
+				case "ArrowUp":
+					joystick &= ~0x01;
+					joystickSend();
+					break;
+				case "ArrowDown":
+					joystick &= ~0x02;
+					joystickSend();
+					break;
+				case "ArrowLeft":
+					joystick &= ~0x04;
+					joystickSend();
+					break;
+				case "ArrowRight":
+					joystick &= ~0x08;
+					joystickSend();
+					break;
+			    case "1":
+					joystick &= ~0x10;
+					joystickSend();
+					break;
+				case "2":
+					joystick &= ~0x20;
+					joystickSend();
+					break;
+				case "3":
+					joystick &= ~0x40;
+					joystickSend();
+					break;
+				case "4":
+					joystick &= ~0x80;
+					joystickSend();
 					break;
 				// case 'q':
 				// case 'Q':
