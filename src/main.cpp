@@ -1,24 +1,17 @@
 #define SERIALBASIC             //define this for using serial terminal in basic
 #define websocketLineLength 64  //a print line longer than this will be split
-//#define USEWEBSERVER            //you can comment these out to save compile time
-//#define USEOTA
 
 #include <Arduino.h>
-#ifdef UAEOTA
 #include <ArduinoOTA.h>
-#endif
 #include <LoopbackStream.h>
 #include <SPIFFS.h>
 #include <WiFi.h>
-#ifdef USEWEBSERVER
 #include <WiFiClient.h>
 #include <webServer.h>
-#endif
 #include <webSocketsServer.h>
 
 WebSocketsServer webSocket = WebSocketsServer(81);
 
-#ifdef USEWEBSERVER
 WebServer webServer(80);
 File fsUploadFile;
 //***********************************WEB SERVER FUNCTIONS**********************************
@@ -63,7 +56,6 @@ bool exists(String path) {
     return yes;
 }
 //**********************************END OF WEB SERVER FUNCTIONS****************************
-#endif
 
 #define SerialDebug Serial
 
@@ -2061,7 +2053,6 @@ void setup() {
     webSocket.begin();
     webSocket.onEvent(webSocketEvent);
     SPIFFS.begin();
-#ifdef USEWEBSERVER
     {  //************************************PRETTY MUCH THE ENTIRE WEB SERVER CODE************************************************
         webServer.on("/files", HTTP_GET, []() {
             String content = F("<html><head><style>a{color:#f3bf00;}body{background-color:#000000;color:#f3bf00;}table{border-collapse:collapse;}td,th{border: 1px solid #f3bf00;}input[type=text]{background-color:#000000;color:#f3bf00;border: 1px solid #f3bf00;width:6em;}</style></head><body><h1>File list</h1><table><tr><th>Delete</th><th>Size</th><th>Filename</th></tr>");
@@ -2069,7 +2060,7 @@ void setup() {
             if (root.isDirectory()) {
                 File file = root.openNextFile();
                 while (file) {
-                    String fileName = String(file.name()).substr(1);
+                    String fileName = String(file.name()).substring(1);
                     String fileSize = String(file.size());
                     content += F("<tr><td><a href=\"/delete?n=");  //make delete link
                     content += fileName;
@@ -2156,8 +2147,6 @@ void setup() {
         });
         webServer.begin();
     }
-#endif
-#ifdef USEOTA
     {  //***********************************************ARDUINO OTA SETUP**********************************************************
         ArduinoOTA.setHostname("esp32Cam");
         ArduinoOTA
@@ -2192,7 +2181,6 @@ void setup() {
             });
         ArduinoOTA.begin();
     }
-#endif
 
     xTaskCreatePinnedToCore(
         TaskBasiccode,   /* Task function. */
@@ -2383,12 +2371,8 @@ void loop() {
     uint16_t outputLineIndex = 0;
     while (1) {
         webSocket.loop();
-#ifdef USEWEBSERVER
         webServer.handleClient();
-#endif
-#ifdef USEOTA
         ArduinoOTA.handle();
-#endif
 #ifdef SERIALBASIC
         if (Serial.available()) {
             streamKeyboard.write(Serial.read());
