@@ -16,6 +16,9 @@ const char *softApPass = "password";
 #include <webServer.h>
 #include <webSocketsServer.h>
 
+#define blinkLED 33  //blinks when connecting, then stays on. On the esp cam, it's 33. On the dev boards, it's 2
+
+#include "rover.h"
 uint8_t joystick = 255;  //global variable to store joystick state
 bool joystickLock = 0;   //and another for locking while reading
 
@@ -451,7 +454,8 @@ const static unsigned char keywords[] = {
     'E', 'N', 'D' + 0x80,
     'R', 'S', 'E', 'E', 'D' + 0x80,
     'C', 'H', 'A', 'I', 'N' + 0x80,
-    'L', 'E', 'D' + 0x80,
+    'D', 'R', 'I', 'V', 'E' + 0x80,
+    'C', 'L', 'A', 'W' + 0x80,
 #ifdef ENABLE_TONES
     'T', 'O', 'N', 'E', 'W' + 0x80,
     'T', 'O', 'N', 'E' + 0x80,
@@ -500,8 +504,9 @@ enum {
     KW_END,
     KW_RSEED,
     KW_CHAIN,
-    KW_LED,
-#ifdef ENABLE_TONES
+    KW_ROVDRIVE,
+    KW_ROVCLAW,
+#ifdef ENABLEDTONES
     KW_TONEW,
     KW_TONE,
     KW_NOTONE,
@@ -604,7 +609,7 @@ static const unsigned char okmsg[] = "OK";
 static const unsigned char whatmsg[] = "What? ";
 static const unsigned char howmsg[] = "How?";
 static const unsigned char sorrymsg[] = "Sorry!";
-static const unsigned char initmsg[] = "WinterBASIC " kVersion;
+static const unsigned char initmsg[] = "Winter Camp BASIC " kVersion;
 static const unsigned char memorymsg[] = " bytes free.";
 #ifdef ARDUINO
 #ifdef ENABLE_EEPROM
@@ -1399,8 +1404,10 @@ void TaskBasiccode(void *pvParameters) {
                 goto print;
             case KW_POKE:
                 goto poke;
-            case KW_LED:
-                goto led;
+            case KW_ROVDRIVE:
+                goto roverDrive;
+            case KW_ROVCLAW:
+                goto roverClaw;
             case KW_END:
             case KW_STOP:
                 // This is the easy way to end - set the current line to the end of program attempt to run it
@@ -1738,7 +1745,7 @@ void TaskBasiccode(void *pvParameters) {
             goto qwhat;
     }
         goto run_next_statement;
-    led : {
+    roverDrive : {
         short int value;
 
         // Work out where to put it
@@ -1746,7 +1753,21 @@ void TaskBasiccode(void *pvParameters) {
         value = expression();
         if (expression_error)
             goto qwhat;
-        digitalWrite(2, value);
+        roverDrive(value);
+        // Check that we are at the end of the statement
+        if (*txtpos != NL && *txtpos != ':')
+            goto qwhat;
+    }
+        goto run_next_statement;
+    roverClaw : {
+        short int value;
+
+        // Work out where to put it
+        expression_error = 0;
+        value = expression();
+        if (expression_error)
+            goto qwhat;
+        roverClaw(value);
         // Check that we are at the end of the statement
         if (*txtpos != NL && *txtpos != ':')
             goto qwhat;
@@ -2028,7 +2049,8 @@ void TaskBasiccode(void *pvParameters) {
 /***********************************************************/
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length);
 void setup() {
-    pinMode(2, OUTPUT);
+    pinMode(blinkLED, OUTPUT);
+    roverInit();
 #ifdef ARDUINO
     Serial.begin(kConsoleBaud);  // opens serial port
     while (!Serial)
@@ -2071,7 +2093,10 @@ void setup() {
     int waitConnectCount = 10;
     while (WiFi.status() != WL_CONNECTED) {
         Serial.print('.');
-        delay(1000);
+        digitalWrite(blinkLED, HIGH);
+        delay(200);
+        digitalWrite(blinkLED, LOW);
+        delay(200);
         waitConnectCount--;
         if (waitConnectCount == 0) {
             WiFi.disconnect();
