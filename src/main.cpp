@@ -16,6 +16,7 @@ const char *softApPass = "password";
 #include <webSocketsServer.h>
 
 uint8_t joystick = 255;  //global variable to store joystick state
+bool joystickLock = 0;   //and another for locking while reading
 
 WebSocketsServer webSocket = WebSocketsServer(81);
 
@@ -937,8 +938,12 @@ static short int expr4(void) {
 #else
                 return (rand() % a);
 #endif
-            case FUNC_JOY:
-                return joystick;
+            case FUNC_JOY: {
+                joystickLock = 1;
+                uint8_t j = joystick;
+                joystickLock = 0;
+                return j;
+            }
         }
     }
 
@@ -2458,6 +2463,8 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
             int8_t c = 0;
             switch (payload[0]) {
                 case 0x12:  //joystick commands
+                    while (joystickLock != 0)
+                        ;
                     joystick = 0;
                     for (uint8_t i = 0; i <= 7; i++) {
                         if (payload[i + 1] & 1) {

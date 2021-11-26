@@ -176,6 +176,9 @@
 				case 'Enter':
 					submitInput()
 					break;
+				case "Escape":
+					breakButton();
+					break;
 				case "ArrowUp":
 					joystick &= ~0x01;
 					joystickSend();
