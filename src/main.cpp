@@ -127,7 +127,7 @@ TaskHandle_t TaskBasic;
 //    down the whole thing so we can get back to implementing
 //    features instead of licenses.  Thank you for your time.
 
-#define kVersion "v0.15W"
+#define kVersion "v0.77"
 
 // v0.15: 2018-06-23
 //      Integrating some contributions
@@ -603,7 +603,7 @@ static const unsigned char okmsg[] = "OK";
 static const unsigned char whatmsg[] = "What? ";
 static const unsigned char howmsg[] = "How?";
 static const unsigned char sorrymsg[] = "Sorry!";
-static const unsigned char initmsg[] = "TinyBasic Plus " kVersion;
+static const unsigned char initmsg[] = "WinterBASIC " kVersion; 
 static const unsigned char memorymsg[] = " bytes free.";
 #ifdef ARDUINO
 #ifdef ENABLE_EEPROM
