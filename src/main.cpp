@@ -8,6 +8,7 @@ const char *softApPass = "password";
 
 #include <Arduino.h>
 #include <ArduinoOTA.h>
+#include <ESPmDNS.h>
 #include <LoopbackStream.h>
 #include <SPIFFS.h>
 #include <WiFi.h>
@@ -603,7 +604,7 @@ static const unsigned char okmsg[] = "OK";
 static const unsigned char whatmsg[] = "What? ";
 static const unsigned char howmsg[] = "How?";
 static const unsigned char sorrymsg[] = "Sorry!";
-static const unsigned char initmsg[] = "WinterBASIC " kVersion; 
+static const unsigned char initmsg[] = "WinterBASIC " kVersion;
 static const unsigned char memorymsg[] = " bytes free.";
 #ifdef ARDUINO
 #ifdef ENABLE_EEPROM
@@ -2083,6 +2084,7 @@ void setup() {
     Serial.println(WiFi.softAPIP());
     webSocket.begin();
     webSocket.onEvent(webSocketEvent);
+    MDNS.begin("basic");
     SPIFFS.begin();
     {  //************************************PRETTY MUCH THE ENTIRE WEB SERVER CODE************************************************
         webServer.on("/files", HTTP_GET, []() {
