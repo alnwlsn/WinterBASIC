@@ -906,6 +906,17 @@ static short int expr4(void) {
 
         unsigned char f = table_index;
 
+        switch (f) {  //for those functions that don't need a () after it
+            case FUNC_JOY: {
+                joystickLock = 1;
+                uint8_t j = joystick;
+                joystickLock = 0;
+                return j;
+            }
+            default:
+                break;
+        }
+
         if (*txtpos != '(')
             goto expr4_error;
 
@@ -938,12 +949,6 @@ static short int expr4(void) {
 #else
                 return (rand() % a);
 #endif
-            case FUNC_JOY: {
-                joystickLock = 1;
-                uint8_t j = joystick;
-                joystickLock = 0;
-                return j;
-            }
         }
     }
 
@@ -2471,7 +2476,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
                             joystick |= (1 << i);
                         }
                     }
-                    Serial.println(joystick);
+                    //Serial.println(joystick);
                     break;
                 case 0x11:  //keyboard text
                     while (1) {
