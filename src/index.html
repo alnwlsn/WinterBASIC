@@ -71,7 +71,8 @@
 	<div class="footerct">
 		<span id="constat">waiting...</span>
 		<br>
-		<input type="button" style="width: 70px; height: 25px" value="BREAK" onclick="breakButton()"></input>
+		<input type="button" style="width: 70px; height: 25px" value="BREAK" onclick="buttonBreak()"></input>
+		<input type="button" style="width: 70px; height: 25px" value="RUN" onclick="buttonRun()"></input>
 	</div>
 	<div class=" footerct">
 		<div id=screenText style="font-size:14px; font-family: 'Courier New', monospace; white-space: pre;">
@@ -106,8 +107,12 @@
 			//websocket.send(st);
 		}
 
-		function breakButton() {
+		function buttonBreak() {
 			websocket.send("\x11\x03");
+		}
+		function buttonRun(){
+			websocket.send("\x11" + "run" + "\n");
+			document.getElementById("inputBox").value = ""
 		}
 
 		var joystick = 255;
@@ -177,7 +182,7 @@
 					submitInput()
 					break;
 				case "Escape":
-					breakButton();
+					buttonBreak();
 					break;
 				case "ArrowUp":
 					joystick &= ~0x01;
@@ -210,6 +215,9 @@
 				case "4":
 					joystick &= ~0x80;
 					joystickSend();
+					break;
+				case "PageUp":
+					buttonRun();
 					break;
 				// case 'q':
 				// case 'Q':
