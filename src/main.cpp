@@ -1,7 +1,7 @@
 #define SERIALBASIC             //define this for using serial terminal in basic
 #define websocketLineLength 64  //a print line longer than this will be split
 
-const char *ssid = "rhombus3";
+const char *ssid = "rhombus";
 const char *pass = "blindhike77";
 const char *softApSsid = "ESP32-1";
 const char *softApPass = "password";
@@ -555,6 +555,7 @@ const static unsigned char func_tab[] = {
     'R', 'N', 'D' + 0x80,
     'J', 'O', 'Y' + 0x80,
     'C', 'L', 'K' + 0x80,
+    'L', 'I', 'G', 'H', 'T' + 0x80,
     0};
 #define FUNC_PEEK 0
 #define FUNC_ABS 1
@@ -563,7 +564,8 @@ const static unsigned char func_tab[] = {
 #define FUNC_RND 4
 #define FUNC_JOY 5
 #define FUNC_CLK 6
-#define FUNC_UNKNOWN 7
+#define FUNC_LIGHT 7
+#define FUNC_UNKNOWN 8
 
 const static unsigned char to_tab[] = {
     'T', 'O' + 0x80,
@@ -933,6 +935,9 @@ static short int expr4(void) {
             case FUNC_CLK: {
                 int16_t j = basicTimer.value() / 10;
                 return j;
+            }
+            case FUNC_LIGHT: {
+                return lineSensor();
             }
             default:
                 break;
@@ -1432,6 +1437,7 @@ void TaskBasiccode(void *pvParameters) {
             case KW_END:
             case KW_STOP:
                 // This is the easy way to end - set the current line to the end of program attempt to run it
+                roverDrive(0);
                 if (txtpos[0] != NL)
                     goto qwhat;
                 current_line = program_end;
@@ -2132,7 +2138,7 @@ void setup() {
     WiFi.mode(WIFI_MODE_APSTA);
     WiFi.softAP(softApSsid, softApPass);
     WiFi.begin(ssid, pass);
-    int waitConnectCount = 20;
+    int waitConnectCount = 10;
     while (WiFi.status() != WL_CONNECTED) {
         Serial.print('.');
         digitalWrite(blinkLED, HIGH);

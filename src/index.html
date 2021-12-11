@@ -89,7 +89,7 @@
 	<script>
 		var screenMem = "";
 		var screenLinesLimit = 25;
-		var websocket = new WebSocket("ws://192.168.1.155"+location.host+":81/");
+		var websocket = new WebSocket("ws://"+location.host+":81/");
 		websocket.onmessage = function (event) {
 			screenMem += event.data;
 			document.getElementById("screenText").innerHTML = screenMem
@@ -108,7 +108,7 @@
 		}
 
 		function buttonBreak() {
-			websocket.send("\x11\x03");
+			websocket.send("\x11\x03\nSTOP\n");
 		}
 		function buttonRun(){
 			websocket.send("\x11" + "run" + "\n");
