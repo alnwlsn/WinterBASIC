@@ -15,5 +15,6 @@
 void roverInit(); //sets up the hardware
 void roverDrive(uint8_t); //drives the drive motors - odd bits are motor power, even bits are direction
 void roverClaw(uint8_t); //drives servo attached to claw
+void flashlight(bool); 
 
 #endif

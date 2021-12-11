@@ -48,3 +48,6 @@ void roverDrive(uint8_t drive) {   //drives the drive motors - odd bits are moto
 void roverClaw(uint8_t v){
     servo1.write(v);
 }
+void flashlight(bool v){
+    digitalWrite(whiteLedPin, v);
+}

@@ -1,7 +1,7 @@
 #define SERIALBASIC             //define this for using serial terminal in basic
 #define websocketLineLength 64  //a print line longer than this will be split
 
-const char *ssid = "rhombus";
+const char *ssid = "rhombus3";
 const char *pass = "blindhike77";
 const char *softApSsid = "ESP32-1";
 const char *softApPass = "password";
@@ -2090,7 +2090,7 @@ void setup() {
     WiFi.mode(WIFI_MODE_APSTA);
     WiFi.softAP(softApSsid, softApPass);
     WiFi.begin(ssid, pass);
-    int waitConnectCount = 10;
+    int waitConnectCount = 20;
     while (WiFi.status() != WL_CONNECTED) {
         Serial.print('.');
         digitalWrite(blinkLED, HIGH);
@@ -2101,9 +2101,17 @@ void setup() {
         if (waitConnectCount == 0) {
             WiFi.disconnect();
             Serial.print(F("Given up on connect to AP\r\n"));
+            flashlight(1);
+            delay(100);
+            flashlight(0);
+            delay(100);
             break;
         }
     }
+    flashlight(1);
+    delay(100);
+    flashlight(0);
+    delay(100);
     Serial.println(WiFi.localIP());
     Serial.print("ESP32 IP as soft AP: ");
     Serial.println(WiFi.softAPIP());
