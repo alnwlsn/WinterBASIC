@@ -22,6 +22,9 @@ const char *softApPass = "password";
 uint8_t joystick = 255;  //global variable to store joystick state
 bool joystickLock = 0;   //and another for locking while reading
 
+#include "stopwatch.h"
+Stopwatch basicTimer;
+
 WebSocketsServer webSocket = WebSocketsServer(81);
 
 WebServer webServer(80);
@@ -456,6 +459,9 @@ const static unsigned char keywords[] = {
     'C', 'H', 'A', 'I', 'N' + 0x80,
     'D', 'R', 'I', 'V', 'E' + 0x80,
     'C', 'L', 'A', 'W' + 0x80,
+    'C', 'L', 'K', 'R', 'U', 'N' + 0x80,
+    'C', 'L', 'K', 'S', 'T', 'O', 'P' + 0x80,
+    'C', 'L', 'K', 'S', 'E', 'T' + 0x80,
 #ifdef ENABLE_TONES
     'T', 'O', 'N', 'E', 'W' + 0x80,
     'T', 'O', 'N', 'E' + 0x80,
@@ -506,6 +512,9 @@ enum {
     KW_CHAIN,
     KW_ROVDRIVE,
     KW_ROVCLAW,
+    KW_CLKRUN,
+    KW_CLKSTOP,
+    KW_CLKSET,
 #ifdef ENABLEDTONES
     KW_TONEW,
     KW_TONE,
@@ -545,6 +554,7 @@ const static unsigned char func_tab[] = {
     'D', 'R', 'E', 'A', 'D' + 0x80,
     'R', 'N', 'D' + 0x80,
     'J', 'O', 'Y' + 0x80,
+    'C', 'L', 'K' + 0x80,
     0};
 #define FUNC_PEEK 0
 #define FUNC_ABS 1
@@ -552,7 +562,8 @@ const static unsigned char func_tab[] = {
 #define FUNC_DREAD 3
 #define FUNC_RND 4
 #define FUNC_JOY 5
-#define FUNC_UNKNOWN 6
+#define FUNC_CLK 6
+#define FUNC_UNKNOWN 7
 
 const static unsigned char to_tab[] = {
     'T', 'O' + 0x80,
@@ -917,6 +928,10 @@ static short int expr4(void) {
                 joystickLock = 1;
                 uint8_t j = joystick;
                 joystickLock = 0;
+                return j;
+            }
+            case FUNC_CLK: {
+                int16_t j = basicTimer.value() / 10;
                 return j;
             }
             default:
@@ -1408,6 +1423,12 @@ void TaskBasiccode(void *pvParameters) {
                 goto roverDrive;
             case KW_ROVCLAW:
                 goto roverClaw;
+            case KW_CLKRUN:
+                goto clockRun;
+            case KW_CLKSET:
+                goto clockSet;
+            case KW_CLKSTOP:
+                goto clockStop;
             case KW_END:
             case KW_STOP:
                 // This is the easy way to end - set the current line to the end of program attempt to run it
@@ -1768,6 +1789,27 @@ void TaskBasiccode(void *pvParameters) {
         if (expression_error)
             goto qwhat;
         roverClaw(value);
+        // Check that we are at the end of the statement
+        if (*txtpos != NL && *txtpos != ':')
+            goto qwhat;
+    }
+        goto run_next_statement;
+    clockRun : {
+        basicTimer.start();
+    }
+        goto run_next_statement;
+    clockStop : {
+        basicTimer.stop();
+    }
+        goto run_next_statement;
+    clockSet : {
+        short int value;
+        // Work out where to put it
+        expression_error = 0;
+        value = expression();
+        if (expression_error)
+            goto qwhat;
+        basicTimer.set(value * 10);
         // Check that we are at the end of the statement
         if (*txtpos != NL && *txtpos != ':')
             goto qwhat;
