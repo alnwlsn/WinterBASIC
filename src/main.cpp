@@ -15,7 +15,7 @@
 uint8_t id = 1;  //base configuration
 const char *ssid = "rhombus";
 const char *pass = "blindhike77";
-const char *softApSsid = "ESP32";
+const char *softApSsid = "esprov";
 const char *softApPass = "password";
 
 WiFiUDP udp;
