@@ -87,6 +87,11 @@
 		color: #eeee00; background-color: #000000; font-size:14px; font-family: 'Courier New', monospace;"">
 	</div>
 	<script>
+		var xmlHttp = new XMLHttpRequest();
+    	xmlHttp.open( "GET", "http://"+location.host+"/id", false ); // false for synchronous request
+    	xmlHttp.send( null );
+    	var id = xmlHttp.responseText;
+
 		var screenMem = "";
 		var screenLinesLimit = 25;
 		var websocket = new WebSocket("ws://"+location.host+":81/");
@@ -102,7 +107,7 @@
 
 		}
 		websocket.onopen = function () {
-			document.getElementById("constat").innerHTML = "Connected"
+			document.getElementById("constat").innerHTML = "Connected - "+id;
 			document.getElementById("constat").style.color = 'LightGreen';
 			//websocket.send(st);
 		}
