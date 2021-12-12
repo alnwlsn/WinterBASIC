@@ -1,6 +1,7 @@
 #define SERIALBASIC             //define this for using serial terminal in basic
 #define websocketLineLength 64  //a print line longer than this will be split
 
+uint8_t id = 1;
 const char *ssid = "rhombus";
 const char *pass = "blindhike77";
 const char *softApSsid = "ESP32-1";
@@ -15,6 +16,9 @@ const char *softApPass = "password";
 #include <WiFiClient.h>
 #include <webServer.h>
 #include <webSocketsServer.h>
+#include <WiFiUdp.h>
+WiFiUDP udp;
+uint16_t localUDPport = 7700;
 
 #define blinkLED 33  //blinks when connecting, then stays on. On the esp cam, it's 33. On the dev boards, it's 2
 
@@ -2160,6 +2164,19 @@ void setup() {
     delay(100);
     flashlight(0);
     delay(100);
+    
+    uint8_t bootpkt[6];
+    bootpkt[0] = 1;
+    bootpkt[1] = id;
+    bootpkt[2] = WiFi.localIP()[0];
+    bootpkt[3] = WiFi.localIP()[1];
+    bootpkt[4] = WiFi.localIP()[2];
+    bootpkt[5] = WiFi.localIP()[3];
+    IPAddress bcast(255, 255, 255, 255);
+    udp.beginPacket(bcast, localUDPport);
+    udp.write(bootpkt, 6);
+    udp.endPacket();
+
     Serial.println(WiFi.localIP());
     Serial.print("ESP32 IP as soft AP: ");
     Serial.println(WiFi.softAPIP());
