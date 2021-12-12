@@ -1,12 +1,3 @@
-#define SERIALBASIC             //define this for using serial terminal in basic
-#define websocketLineLength 64  //a print line longer than this will be split
-
-uint8_t id = 1;
-const char *ssid = "rhombus";
-const char *pass = "blindhike77";
-const char *softApSsid = "ESP32-1";
-const char *softApPass = "password";
-
 #include <Arduino.h>
 #include <ArduinoOTA.h>
 #include <ESPmDNS.h>
@@ -14,9 +5,19 @@ const char *softApPass = "password";
 #include <SPIFFS.h>
 #include <WiFi.h>
 #include <WiFiClient.h>
+#include <WiFiUdp.h>
 #include <webServer.h>
 #include <webSocketsServer.h>
-#include <WiFiUdp.h>
+
+#define SERIALBASIC             //define this for using serial terminal in basic
+#define websocketLineLength 64  //a print line longer than this will be split
+
+uint8_t id = 1;  //base configuration
+const char *ssid = "rhombus";
+const char *pass = "blindhike77";
+const char *softApSsid = "ESP32";
+const char *softApPass = "password";
+
 WiFiUDP udp;
 uint16_t localUDPport = 7700;
 
@@ -2138,10 +2139,34 @@ void setup() {
 #endif /* ENABLE_EEPROM */
 
 #endif /* ARDUINO */
+    SPIFFS.begin();
 
     WiFi.mode(WIFI_MODE_APSTA);
+    // if (SPIFFS.exists(F("/config.txt"))) {    //try to use a config file - didn't work, fix later
+    //     File f = SPIFFS.open(F("/config.txt"), "r");
+    //     String fid = f.readStringUntil('\n');
+    //     String fssid = f.readStringUntil('\n');
+    //     String fpass = f.readStringUntil('\n');
+    //     String gssid = f.readStringUntil('\n');
+    //     String gpass = f.readStringUntil('\n');
+    //     f.close();
+    //     id = fid.toInt();
+    //     WiFi.begin(fssid.c_str(), fpass.c_str());  //need the strings to be char* for the wifi.begin() function
+    //     WiFi.softAP(gssid.c_str(), gpass.c_str());
+    // } else {
+    //     for (int y = 0; y <= 10; y++) {
+    //         digitalWrite(blinkLED, HIGH);
+    //         delay(50);
+    //         digitalWrite(blinkLED, LOW);
+    //         delay(50);
+    //     }
+        WiFi.softAP(softApSsid, softApPass);
+        WiFi.begin(ssid, pass);
+    // }
+
     WiFi.softAP(softApSsid, softApPass);
     WiFi.begin(ssid, pass);
+
     int waitConnectCount = 10;
     while (WiFi.status() != WL_CONNECTED) {
         Serial.print('.');
@@ -2164,7 +2189,7 @@ void setup() {
     delay(100);
     flashlight(0);
     delay(100);
-    
+
     uint8_t bootpkt[6];
     bootpkt[0] = 1;
     bootpkt[1] = id;
@@ -2183,7 +2208,6 @@ void setup() {
     webSocket.begin();
     webSocket.onEvent(webSocketEvent);
     MDNS.begin("basic");
-    SPIFFS.begin();
     {  //************************************PRETTY MUCH THE ENTIRE WEB SERVER CODE************************************************
         webServer.on("/files", HTTP_GET, []() {
             String content = F("<html><head><style>a{color:#f3bf00;}body{background-color:#000000;color:#f3bf00;}table{border-collapse:collapse;}td,th{border: 1px solid #f3bf00;}input[type=text]{background-color:#000000;color:#f3bf00;border: 1px solid #f3bf00;width:6em;}</style></head><body><h1>File list</h1><table><tr><th>Delete</th><th>Size</th><th>Filename</th></tr>");
@@ -2403,7 +2427,7 @@ static void outchar(unsigned char c) {
     if (inhibitOutput) return;
     if (outStream == kStreamFile) {
         // output to a file
-        fp.write(c);
+        if (c != 13) fp.write(c);
     } else {
         while (!streamScreen.availableForWrite())
             ;
