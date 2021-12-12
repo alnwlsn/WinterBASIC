@@ -64,7 +64,7 @@
 	</style>
 </head>
 
-<body bgcolor="black">
+<body id=pastarea bgcolor="black">
 	<!-- <div class="headerct" style="height: 50px; font-size: 20px">
 		Wilson Rover Controls v5
 	</div> -->
@@ -93,12 +93,11 @@
     	var id = xmlHttp.responseText;
 
 		var screenMem = "";
-		var screenLinesLimit = 25;
+		var screenLinesLimit = 50;
 		var websocket = new WebSocket("ws://"+location.host+":81/");
 		websocket.onmessage = function (event) {
 			screenMem += event.data;
 			document.getElementById("screenText").innerHTML = screenMem
-			var screenLinesLimit = 25;
 			var count = [...screenMem].filter(x => x === "\n").length; //count number of newlines
 			while (count > screenLinesLimit) { //if there are too many lines
 				screenMem = screenMem.substring(screenMem.indexOf("\n") + 1); //remove up to first newline
@@ -145,6 +144,34 @@
 			websocket.send("\x11" + w + "\n");
 			document.getElementById("inputBox").value = ""
 		}
+
+		function handlePaste (e) {
+			var clipboardData, pastedData;
+			// Stop data actually being pasted into div
+			e.stopPropagation();
+			e.preventDefault();
+			// Get pasted data via clipboard API
+			clipboardData = e.clipboardData || window.clipboardData;
+			pastedData = clipboardData.getData('Text');
+			var line = "";
+			for (let i = 0; i < pastedData.length; i++) {
+					var c = pastedData[i];
+					switch(c){
+						case "\r":
+							break;
+						case "\n":
+							line = line + c;
+							websocket.send("\x11" + line);
+							line = "";
+							break;
+						default:
+							line = line + c;
+							break;
+					}
+			}						
+		}
+		document.getElementById('pastarea').addEventListener('paste', handlePaste);
+		
 		document.addEventListener("keyup", function onEvent(event2) {
 			switch (event2.key) {
 				case "ArrowUp":
