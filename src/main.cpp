@@ -2211,6 +2211,11 @@ void setup() {
     webSocket.onEvent(webSocketEvent);
     MDNS.begin("basic");
     {  //************************************PRETTY MUCH THE ENTIRE WEB SERVER CODE************************************************
+        webServer.on("/id", HTTP_GET, []() {
+            webServer.sendHeader(F("Connection"), F("close"));
+            webServer.sendHeader(F("Access-Control-Allow-Origin"), F("*"));
+            webServer.send(200, F("text/html"), String(id));
+        });
         webServer.on("/files", HTTP_GET, []() {
             String content = F("<html><head><style>a{color:#f3bf00;}body{background-color:#000000;color:#f3bf00;}table{border-collapse:collapse;}td,th{border: 1px solid #f3bf00;}input[type=text]{background-color:#000000;color:#f3bf00;border: 1px solid #f3bf00;width:6em;}</style></head><body><h1>File list</h1><table><tr><th>Delete</th><th>Size</th><th>Filename</th></tr>");
             File root = SPIFFS.open("/");
