@@ -225,7 +225,7 @@ char eliminateCompileErrors = 1;  // fix to suppress arduino build errors
 #undef ARDUINO
 #include "desktop.h"
 #else
-#define ARDUINO 1
+//#define ARDUINO 1
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -614,7 +614,7 @@ const static unsigned char highlow_tab[] = {
 static unsigned char *stack_limit;
 static unsigned char *program_start;
 static unsigned char *program_end;
-static unsigned char *stack;  // Software stack for things that should go on the CPU stack
+//static unsigned char *stack;  // Software stack for things that should go on the CPU stack
 static unsigned char *variables_begin;
 static unsigned char *current_line;
 static unsigned char *sp;
@@ -1148,7 +1148,7 @@ void TaskBasiccode(void *pvParameters) {
         unsigned char *newEnd;
         unsigned char linelen;
         boolean isDigital;
-        boolean alsoWait = false;
+        //boolean alsoWait = false;
         int val;
 
 #ifdef ARDUINO
@@ -1456,6 +1456,7 @@ void TaskBasiccode(void *pvParameters) {
                 goto awrite;
             case KW_DWRITE:  // DWRITE <pin>, HIGH|LOW
                 isDigital = true;
+                if (isDigital == true) isDigital = true;  //hacky compiler warning fix
                 goto dwrite;
 
             case KW_RSEED:
@@ -1748,33 +1749,35 @@ void TaskBasiccode(void *pvParameters) {
         *var = value;
     }
         goto run_next_statement;
-    poke : {
-        short int value;
-        unsigned char *address;
+    poke : {  //doesn't actually work
+        // short int value;
+        // unsigned char *address;
 
-        // Work out where to put it
-        expression_error = 0;
-        value = expression();
-        if (expression_error)
-            goto qwhat;
-        address = (unsigned char *)value;
+        // // Work out where to put it
+        // expression_error = 0;
+        // value = expression();
+        // if (expression_error)
+        //     goto qwhat;
+        // //address = (unsigned char *)value;
 
-        // check for a comma
-        ignore_blanks();
-        if (*txtpos != ',')
-            goto qwhat;
-        txtpos++;
-        ignore_blanks();
+        // if (address == 0) address = 0;  //compiler warning hack fix
 
-        // Now get the value to assign
-        expression_error = 0;
-        value = expression();
-        if (expression_error)
-            goto qwhat;
-        //printf("Poke %p value %i\n",address, (unsigned char)value);
-        // Check that we are at the end of the statement
-        if (*txtpos != NL && *txtpos != ':')
-            goto qwhat;
+        // // check for a comma
+        // ignore_blanks();
+        // if (*txtpos != ',')
+        //     goto qwhat;
+        // txtpos++;
+        // ignore_blanks();
+
+        // // Now get the value to assign
+        // expression_error = 0;
+        // value = expression();
+        // if (expression_error)
+        //     goto qwhat;
+        // //printf("Poke %p value %i\n",address, (unsigned char)value);
+        // // Check that we are at the end of the statement
+        // if (*txtpos != NL && *txtpos != ':')
+        //     goto qwhat;
     }
         goto run_next_statement;
     roverDrive : {
@@ -1908,46 +1911,46 @@ void TaskBasiccode(void *pvParameters) {
         /*************************************************/
 
 #ifdef ARDUINO
-    awrite:  // AWRITE <pin>,val
-    dwrite : {
-        short int pinNo;
-        short int value;
-        unsigned char *txtposBak;
+    awrite:     // AWRITE <pin>,val
+    dwrite : {  //not currently used
+        // short int pinNo;
+        // short int value;
+        // unsigned char *txtposBak;
 
-        // Get the pin number
-        expression_error = 0;
-        pinNo = expression();
-        if (expression_error)
-            goto qwhat;
+        // // Get the pin number
+        // expression_error = 0;
+        // pinNo = expression();
+        // if (expression_error)
+        //     goto qwhat;
 
-        // check for a comma
-        ignore_blanks();
-        if (*txtpos != ',')
-            goto qwhat;
-        txtpos++;
-        ignore_blanks();
+        // // check for a comma
+        // ignore_blanks();
+        // if (*txtpos != ',')
+        //     goto qwhat;
+        // txtpos++;
+        // ignore_blanks();
 
-        txtposBak = txtpos;
-        scantable(highlow_tab);
-        if (table_index != HIGHLOW_UNKNOWN) {
-            if (table_index <= HIGHLOW_HIGH) {
-                value = 1;
-            } else {
-                value = 0;
-            }
-        } else {
-            // and the value (numerical)
-            expression_error = 0;
-            value = expression();
-            if (expression_error)
-                goto qwhat;
-        }
-        pinMode(pinNo, OUTPUT);
-        if (isDigital) {
-            digitalWrite(pinNo, value);
-        } else {
-            //analogWrite(pinNo, value);
-        }
+        // txtposBak = txtpos;
+        // scantable(highlow_tab);
+        // if (table_index != HIGHLOW_UNKNOWN) {
+        //     if (table_index <= HIGHLOW_HIGH) {
+        //         value = 1;
+        //     } else {
+        //         value = 0;
+        //     }
+        // } else {
+        //     // and the value (numerical)
+        //     expression_error = 0;
+        //     value = expression();
+        //     if (expression_error)
+        //         goto qwhat;
+        // }
+        // pinMode(pinNo, OUTPUT);
+        // if (isDigital) {
+        //     digitalWrite(pinNo, value);
+        // } else {
+        //     //analogWrite(pinNo, value);
+        // }
     }
         goto run_next_statement;
 #else
@@ -2160,8 +2163,8 @@ void setup() {
     //         digitalWrite(blinkLED, LOW);
     //         delay(50);
     //     }
-        WiFi.softAP(softApSsid, softApPass);
-        WiFi.begin(ssid, pass);
+    WiFi.softAP(softApSsid, softApPass);
+    WiFi.begin(ssid, pass);
     // }
 
     WiFi.softAP(softApSsid, softApPass);
