@@ -12,11 +12,11 @@
 #define SERIALBASIC             //define this for using serial terminal in basic
 #define websocketLineLength 64  //a print line longer than this will be split
 
-uint8_t id = 1;  //base configuration
+uint8_t id = 1;  //base configuration (overwritten by config.txt contents)
 const char *ssid = "rhombus";
 const char *pass = "blindhike77";
-const char *softApSsid = "esprov";
-const char *softApPass = "password";
+const char *softApSsid = "esp32";
+const char *softApPass = "pass";
 
 WiFiUDP udp;
 uint16_t localUDPport = 7700;
@@ -2145,31 +2145,32 @@ void setup() {
     SPIFFS.begin();
 
     WiFi.mode(WIFI_MODE_APSTA);
-    // if (SPIFFS.exists(F("/config.txt"))) {    //try to use a config file - didn't work, fix later
-    //     File f = SPIFFS.open(F("/config.txt"), "r");
-    //     String fid = f.readStringUntil('\n');
-    //     String fssid = f.readStringUntil('\n');
-    //     String fpass = f.readStringUntil('\n');
-    //     String gssid = f.readStringUntil('\n');
-    //     String gpass = f.readStringUntil('\n');
-    //     f.close();
-    //     id = fid.toInt();
-    //     WiFi.begin(fssid.c_str(), fpass.c_str());  //need the strings to be char* for the wifi.begin() function
-    //     WiFi.softAP(gssid.c_str(), gpass.c_str());
-    // } else {
-    //     for (int y = 0; y <= 10; y++) {
-    //         digitalWrite(blinkLED, HIGH);
-    //         delay(50);
-    //         digitalWrite(blinkLED, LOW);
-    //         delay(50);
-    //     }
-    WiFi.softAP(softApSsid, softApPass);
-    WiFi.begin(ssid, pass);
-    // }
-
-    WiFi.softAP(softApSsid, softApPass);
-    WiFi.begin(ssid, pass);
-
+    if (SPIFFS.exists(F("/config.txt"))) {
+        File f = SPIFFS.open(F("/config.txt"), "r");
+        String fid = f.readStringUntil('\n');
+        String fssid = f.readStringUntil('\n');
+        String fpass = f.readStringUntil('\n');
+        String gssid = f.readStringUntil('\n');
+        String gpass = f.readStringUntil('\n');
+        fid.trim();
+        fssid.trim();
+        fpass.trim();
+        gssid.trim();
+        gpass.trim();
+        f.close();
+        id = fid.toInt();
+        WiFi.begin(fssid.c_str(), fpass.c_str());  //need the strings to be char* for the wifi.begin() function
+        WiFi.softAP(gssid.c_str(), gpass.c_str());
+    } else {
+        for (int y = 0; y <= 10; y++) {
+            digitalWrite(blinkLED, HIGH);
+            delay(20);
+            digitalWrite(blinkLED, LOW);
+            delay(20);
+        }
+        WiFi.softAP(softApSsid, softApPass);
+        WiFi.begin(ssid, pass);
+    }
     int waitConnectCount = 10;
     while (WiFi.status() != WL_CONNECTED) {
         Serial.print('.');
@@ -2181,17 +2182,15 @@ void setup() {
         if (waitConnectCount == 0) {
             WiFi.disconnect();
             Serial.print(F("Given up on connect to AP\r\n"));
-            flashlight(1);
-            delay(100);
-            flashlight(0);
-            delay(100);
+            for (int y = 0; y <= 10; y++) {
+                digitalWrite(blinkLED, HIGH);
+                delay(50);
+                digitalWrite(blinkLED, LOW);
+                delay(50);
+            }
             break;
         }
     }
-    flashlight(1);
-    delay(100);
-    flashlight(0);
-    delay(100);
 
     uint8_t bootpkt[6];
     bootpkt[0] = 1;
