@@ -561,6 +561,7 @@ const static unsigned char func_tab[] = {
     'J', 'O', 'Y' + 0x80,
     'C', 'L', 'K' + 0x80,
     'L', 'I', 'G', 'H', 'T' + 0x80,
+    'B', 'T', 'N' + 0x80,
     0};
 #define FUNC_PEEK 0
 #define FUNC_ABS 1
@@ -570,7 +571,8 @@ const static unsigned char func_tab[] = {
 #define FUNC_JOY 5
 #define FUNC_CLK 6
 #define FUNC_LIGHT 7
-#define FUNC_UNKNOWN 8
+#define FUNC_BTN 8
+#define FUNC_UNKNOWN 9
 
 const static unsigned char to_tab[] = {
     'T', 'O' + 0x80,
@@ -943,6 +945,9 @@ static short int expr4(void) {
             }
             case FUNC_LIGHT: {
                 return lineSensor();
+            }
+            case FUNC_BTN: {
+                return roverSwitch();
             }
             default:
                 break;

@@ -3,6 +3,7 @@
 Servo servo1;
 
 void roverInit() {
+    pinMode(switchPin, INPUT_PULLUP);
     pinMode(lineSensorPin, INPUT_PULLUP);
     pinMode(whiteLedPin, OUTPUT);
     pinMode(motorAFwd, OUTPUT);
@@ -55,4 +56,8 @@ void flashlight(bool v){
 
 bool lineSensor(){
     return !digitalRead(lineSensorPin);
+}
+
+bool roverSwitch(){ //reads switch on back of unit
+    return !digitalRead(switchPin);
 }
